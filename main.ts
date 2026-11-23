@@ -176,6 +176,28 @@ function drawWrapped(x: number, y: number, s: string, scale: number, maxW: numbe
   return yy;
 }
 
+// Wrap s and guarantee it fits maxLines lines: if it would take more,
+// drop trailing words and end the last line with "..." so text can
+// never spill out of its box.
+function fitLines(s: string, scale: number, maxW: number, maxLines: number): string[] {
+  const lines = wrapText(s, scale, maxW);
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  let last = kept[maxLines - 1];
+  while (last.length > 0 && textWidth(last + '...', scale) > maxW)
+    last = last.slice(0, last.lastIndexOf(' '));
+  kept[maxLines - 1] = last + '...';
+  return kept;
+}
+
+function drawFitted(x: number, y: number, s: string, scale: number, maxW: number, c: RGB, lh: number, maxLines: number, bold = false): void {
+  let yy = y;
+  for (const ln of fitLines(s, scale, maxW, maxLines)) {
+    drawText(x, yy, ln, scale, c, bold);
+    yy += lh;
+  }
+}
+
 // ----------------------------------------------------------------- icons
 function iconGlobe(cx: number, cy: number): void {
   ring(cx, cy, 46, 4, WHITE);
@@ -244,9 +266,9 @@ roundedRect(36, leadY, W - 72, 158, 12, [30, 58, 74]);
 iconGlobe(126, leadY + 79);
 drawText(206, leadY + 16, 'LEAD STORY | CLIMATE', 3, [255, 196, 66], true);
 drawText(206, leadY + 44, 'COP31 ENDS WITH NO CLIMATE PACT', 4, WHITE, true);
-drawWrapped(206, leadY + 84,
+drawFitted(206, leadY + 84,
   'ANTALYA TALKS CLOSE WITHOUT A DEAL. GUTERRES: "NO ' +
-  'AMBIGUITY IN THE SCIENCE." EU REFUSES TO SIGN.', 3, W - 206 - 56, [226, 232, 236], 26);
+  'AMBIGUITY IN THE SCIENCE." EU REFUSES TO SIGN.', 3, W - 206 - 56, [226, 232, 236], 26, 3);
 
 // story panels
 interface Panel { kicker: string; accent: RGB; icon: (x: number, y: number) => void; head: string; body: string }
@@ -271,29 +293,29 @@ const panels: Panel[] = [
     body: '"Chapo Isidro" Meza, on the FBI most-wanted list, is arrested in Guasave, Sinaloa.' },
 ];
 
-const gx = 36, gy = 348, pw = (W - 72 - 16) / 2, ph = 176;
+// Panel geometry is budgeted so every block fits with padding to
+// spare: headline at most 2 lines (y+48, lh 26, glyph 21 -> ends
+// y+95), body at most 4 lines (y+104, lh 18, glyph 14 -> ends
+// y+172), panel height 186 -> 14 px clear at the bottom edge.
+const gx = 36, gy = 342, pw = (W - 72 - 16) / 2, ph = 186, rowGap = 10;
 panels.forEach((p, i) => {
   const x = gx + (i % 2) * (pw + 16);
-  const y = gy + Math.floor(i / 2) * (ph + 14);
+  const y = gy + Math.floor(i / 2) * (ph + rowGap);
   roundedRect(x, y, pw, ph, 10, CARD);
   borderRect(x, y, pw, ph, LINEC);
   rect(x, y, 10, ph, p.accent);
-  iconDisc(x + 58, y + 60, p.accent, p.icon);
-  drawText(x + 104, y + 24, p.kicker, 3, p.accent, true);
-  let hy = y + 50;
-  for (const ln of wrapText(p.head, 3, pw - 122)) {
-    drawText(x + 104, hy, ln, 3, INK, true);
-    hy += 27;
-  }
-  drawWrapped(x + 20, y + 106, p.body.toUpperCase(), 2, pw - 40, GREY, 19);
+  iconDisc(x + 58, y + 58, p.accent, p.icon);
+  drawText(x + 104, y + 22, p.kicker, 3, p.accent, true);
+  drawFitted(x + 104, y + 48, p.head, 3, pw - 122, INK, 26, 2, true);
+  drawFitted(x + 20, y + 104, p.body.toUpperCase(), 2, pw - 40, GREY, 18, 4);
 });
 
 // footer
-const fy = gy + 3 * (ph + 14) + 4;
+const fy = gy + 3 * ph + 2 * rowGap + 8;
 rect(36, fy, W - 72, 2, INK);
-drawCentered(fy + 12, 'ALSO TODAY: 24 DEAD IN NIGERIA BOAT ACCIDENT', 3, INK, true);
-drawCentered(fy + 40, 'CHINA SLAMS US BAN ON TELECOM FIRMS | LISBON MARCHES', 3, INK, true);
-drawCentered(fy + 68, 'OVER LIVING COSTS | ISRAEL COALITION TALKS RESUME', 3, INK, true);
+drawCentered(fy + 10, 'ALSO TODAY: 24 DEAD IN NIGERIA BOAT ACCIDENT', 3, INK, true);
+drawCentered(fy + 36, 'CHINA SLAMS US BAN ON TELECOM FIRMS | LISBON MARCHES', 3, INK, true);
+drawCentered(fy + 62, 'OVER LIVING COSTS | ISRAEL COALITION TALKS RESUME', 3, INK, true);
 
 // ------------------------------------------------------------ PNG encode
 const CRC_TABLE = (() => {
