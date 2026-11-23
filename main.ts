@@ -253,69 +253,89 @@ const iconBadge = (cx: number, cy: number) => {
 };
 
 // ---------------------------------------------------------------- layout
+// Whole-page design system (v3, designed as one page, not panel by
+// panel):
+//   margins 48 on all sides, content width 928
+//   one spacing rhythm: 12 / 16 / 24 gaps, 18-28 px panel padding
+//   masthead -> dark lead panel -> 2x3 story grid -> dark ticker band
+//   every story panel has the same anatomy: a big number in the accent
+//   colour on the left (the day's key figure), kicker, two-line
+//   headline and body on the right, all fitted with fitLines so no
+//   text can ever leave its box.
+const M = 48;
+const CW = W - 2 * M;
+
 fillAll(PAPER);
 rect(0, 0, W, 8, RED);
-drawCentered(24, 'THE WORLD IN ONE DAY', 8, INK, true);
-drawCentered(96, 'MONDAY | 23 NOVEMBER 2026', 5, RED, true);
-rect(36, 148, W - 72, 3, INK);
-rect(36, 156, W - 72, 1, INK);
 
-// lead story
-const leadY = 172;
-roundedRect(36, leadY, W - 72, 158, 12, [30, 58, 74]);
-iconGlobe(126, leadY + 79);
-drawText(206, leadY + 16, 'LEAD STORY | CLIMATE', 3, [255, 196, 66], true);
-drawText(206, leadY + 44, 'COP31 ENDS WITH NO CLIMATE PACT', 4, WHITE, true);
-drawFitted(206, leadY + 84,
+// masthead
+drawCentered(28, 'THE WORLD IN ONE DAY', 7, INK, true);
+drawText(M, 96, 'MONDAY 23 NOVEMBER 2026', 3, RED, true);
+const subR = 'WORLD NEWS IN ONE IMAGE';
+drawText(W - M - textWidth(subR, 3) - subR.length, 96, subR, 3, GREY, true);
+rect(M, 132, CW, 3, INK);
+rect(M, 140, CW, 1, INK);
+
+// lead story: COP31
+const leadY = 156, leadH = 224;
+roundedRect(M, leadY, CW, leadH, 12, [30, 58, 74]);
+iconGlobe(872, leadY + leadH / 2);
+drawText(M + 28, leadY + 24, 'LEAD STORY | CLIMATE', 3, [255, 196, 66], true);
+drawFitted(M + 28, leadY + 52, 'COP31 ENDS WITH NO CLIMATE PACT', 5, 724, WHITE, 44, 2, true);
+drawFitted(M + 28, leadY + 146,
   'ANTALYA TALKS CLOSE WITHOUT A DEAL. GUTERRES: "NO ' +
-  'AMBIGUITY IN THE SCIENCE." EU REFUSES TO SIGN.', 3, W - 206 - 56, [226, 232, 236], 26, 3);
+  'AMBIGUITY IN THE SCIENCE." EU REFUSES TO SIGN.', 3, 724, [226, 232, 236], 24, 3);
 
-// story panels
-interface Panel { kicker: string; accent: RGB; icon: (x: number, y: number) => void; head: string; body: string }
+// story grid: 2 columns x 3 rows
+interface Panel { kicker: string; accent: RGB; num: string; unit: string; head: string; body: string }
 const panels: Panel[] = [
-  { kicker: 'HORMUZ', accent: RED, icon: iconShip,
-    head: 'TANKERS HIT IN THE STRAIT OF HORMUZ',
-    body: 'Two oil tankers struck by projectiles. Bahrain says Iran hit a civilian industrial site; Gulf tensions rise.' },
-  { kicker: 'INDONESIA', accent: [214, 110, 20], icon: iconFlame,
-    head: 'FACTORY FIRE: 3 DEAD, 36 MISSING',
-    body: 'A blaze tears through a candy factory in Banten province as rescuers search for the missing.' },
-  { kicker: 'SPACE', accent: [64, 92, 168], icon: iconPlanet,
+  { kicker: 'HORMUZ', accent: RED, num: '2', unit: 'TANKERS',
+    head: 'TANKERS HIT IN HORMUZ STRAIT',
+    body: 'Two oil tankers struck by projectiles. Bahrain says Iran hit a civilian industrial site.' },
+  { kicker: 'INDONESIA', accent: [214, 110, 20], num: '36', unit: 'MISSING',
+    head: 'FACTORY FIRE: 36 MISSING',
+    body: 'A blaze at a Banten candy factory kills three as rescuers search the ruins.' },
+  { kicker: 'SPACE', accent: [64, 92, 168], num: '8', unit: 'YEARS',
     head: 'PROBE REACHES MERCURY AT LAST',
-    body: "Europe-Japan craft BepiColombo enters Mercury's orbit, ending an eight-year journey." },
-  { kicker: 'PERU', accent: [36, 128, 92], icon: iconQuake,
-    head: 'MAGNITUDE 6.7 EARTHQUAKE',
-    body: 'A strong quake shakes the central Andes and is felt in Lima; no casualties reported at first.' },
-  { kicker: 'SOUTH KOREA', accent: [122, 74, 168], icon: iconCap,
+    body: "Europe-Japan craft BepiColombo enters Mercury's orbit after an eight-year journey." },
+  { kicker: 'PERU', accent: [36, 128, 92], num: '6.7', unit: 'MAGNITUDE',
+    head: 'EARTHQUAKE IN THE ANDES',
+    body: 'A strong quake is felt in Lima; no casualties are reported in the first hours.' },
+  { kicker: 'SOUTH KOREA', accent: [122, 74, 168], num: 'AI', unit: 'SCANDAL',
     head: 'EDUCATION CHIEF QUITS OVER AI',
-    body: "South Korea's education chief resigns amid an AI exam-cheating scandal rocking admissions." },
-  { kicker: 'MEXICO', accent: [168, 128, 24], icon: iconBadge,
-    head: 'MOST-WANTED CARTEL BOSS HELD',
-    body: '"Chapo Isidro" Meza, on the FBI most-wanted list, is arrested in Guasave, Sinaloa.' },
+    body: "South Korea's education chief resigns amid an AI exam-cheating scandal." },
+  { kicker: 'MEXICO', accent: [168, 128, 24], num: 'FBI', unit: 'WANTED',
+    head: 'CARTEL BOSS HELD IN SINALOA',
+    body: '"Chapo Isidro" Meza, on the FBI most-wanted list, is arrested in Guasave.' },
 ];
 
-// Panel geometry is budgeted so every block fits with padding to
-// spare: headline at most 2 lines (y+48, lh 26, glyph 21 -> ends
-// y+95), body at most 4 lines (y+104, lh 18, glyph 14 -> ends
-// y+172), panel height 186 -> 14 px clear at the bottom edge.
-const gx = 36, gy = 342, pw = (W - 72 - 16) / 2, ph = 186, rowGap = 10;
+// Panel anatomy (height 168): number block 110 wide on the left
+// (figure scale 5 at y+34, unit label under it), text zone 310 wide
+// on the right: kicker y+16, headline 2 lines from y+38 (lh 25,
+// glyph 21 -> ends y+84), body 4 lines from y+94 (lh 17, glyph 14
+// -> ends y+159), 9 px clear at the bottom edge.
+const gx = M, gy = 396, pw = (CW - 16) / 2, ph = 168, rowGap = 12;
 panels.forEach((p, i) => {
   const x = gx + (i % 2) * (pw + 16);
   const y = gy + Math.floor(i / 2) * (ph + rowGap);
   roundedRect(x, y, pw, ph, 10, CARD);
   borderRect(x, y, pw, ph, LINEC);
   rect(x, y, 10, ph, p.accent);
-  iconDisc(x + 58, y + 58, p.accent, p.icon);
-  drawText(x + 104, y + 22, p.kicker, 3, p.accent, true);
-  drawFitted(x + 104, y + 48, p.head, 3, pw - 122, INK, 26, 2, true);
-  drawFitted(x + 20, y + 104, p.body.toUpperCase(), 2, pw - 40, GREY, 18, 4);
+  const numW = textWidth(p.num, 5) + p.num.length;
+  drawText(x + 14 + Math.round((110 - numW) / 2), y + 34, p.num, 5, p.accent, true);
+  const unitW = textWidth(p.unit, 2);
+  drawText(x + 14 + Math.round((110 - unitW) / 2), y + 84, p.unit, 2, GREY);
+  rect(x + 132, y + 24, 1, ph - 48, LINEC);
+  drawText(x + 148, y + 16, p.kicker, 2, p.accent, true);
+  drawFitted(x + 148, y + 38, p.head, 3, pw - 162, INK, 25, 2, true);
+  drawFitted(x + 148, y + 94, p.body.toUpperCase(), 2, pw - 162, GREY, 17, 4);
 });
 
-// footer
-const fy = gy + 3 * ph + 2 * rowGap + 8;
-rect(36, fy, W - 72, 2, INK);
-drawCentered(fy + 10, 'ALSO TODAY: 24 DEAD IN NIGERIA BOAT ACCIDENT', 3, INK, true);
-drawCentered(fy + 36, 'CHINA SLAMS US BAN ON TELECOM FIRMS | LISBON MARCHES', 3, INK, true);
-drawCentered(fy + 62, 'OVER LIVING COSTS | ISRAEL COALITION TALKS RESUME', 3, INK, true);
+// ticker band
+const fy = gy + 3 * ph + 2 * rowGap + 24;
+roundedRect(M, fy, CW, 58, 8, INK);
+drawCentered(fy + 9, 'ALSO TODAY: NIGERIA BOAT ACCIDENT KILLS 24 - CHINA SLAMS US TELECOM BAN', 2, WHITE);
+drawCentered(fy + 33, 'LISBON MARCHES OVER LIVING COSTS - ISRAEL COALITION TALKS RESUME', 2, WHITE);
 
 // ------------------------------------------------------------ PNG encode
 const CRC_TABLE = (() => {
